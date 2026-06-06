@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chess</title>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#769656" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app__header">
+        <h1 class="app__title">Chess</h1>
+        <p id="status" class="status">White to move</p>
+      </header>
+
+      <div class="controls">
+        <div class="seg" id="mode-seg" role="group" aria-label="Mode">
+          <button class="seg__btn is-active" data-mode="1p">1 Player</button>
+          <button class="seg__btn" data-mode="2p">2 Players</button>
+        </div>
+
+        <label class="control" id="level-control">
+          <span>Level</span>
+          <select id="level">
+            <option value="1">1 · Beginner</option>
+            <option value="2">2 · Easy</option>
+            <option value="3" selected>3 · Medium</option>
+            <option value="4">4 · Hard</option>
+            <option value="5">5 · Expert</option>
+          </select>
+        </label>
+
+        <label class="control" id="side-control">
+          <span>Play as</span>
+          <select id="side">
+            <option value="w" selected>White</option>
+            <option value="b">Black</option>
+            <option value="random">Random</option>
+          </select>
+        </label>
+
+        <button id="new-game" class="btn btn--primary">New Game</button>
+      </div>
+
+      <div class="layout">
+        <div class="board-wrap">
+          <div id="board" class="board"></div>
+          <div id="promotion" class="promotion hidden"></div>
+          <div id="overlay" class="overlay hidden">
+            <div class="overlay__card">
+              <h2 id="overlay-title">Checkmate</h2>
+              <p id="overlay-text"></p>
+              <button id="overlay-new" class="btn btn--primary">New Game</button>
+            </div>
+          </div>
+        </div>
+
+        <aside class="panel">
+          <div class="captured">
+            <div class="captured__row">
+              <span class="captured__label">White</span>
+              <span id="captured-w" class="captured__pieces"></span>
+              <span id="adv-w" class="captured__adv"></span>
+            </div>
+            <div class="captured__row">
+              <span class="captured__label">Black</span>
+              <span id="captured-b" class="captured__pieces"></span>
+              <span id="adv-b" class="captured__adv"></span>
+            </div>
+          </div>
+
+          <div class="moves">
+            <h2 class="moves__title">Moves</h2>
+            <ol id="move-list" class="moves__list"></ol>
+          </div>
+
+          <div class="panel__actions">
+            <button id="flip" class="btn">Flip</button>
+            <button id="undo" class="btn">Undo</button>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <script src="js/chess.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js");
+      }
+    </script>
+  </body>
+</html>
