@@ -1,4 +1,4 @@
-const CACHE = "chess-v4";
+const CACHE = "chess-v5";
 const ASSETS = [
   "/",
   "/index.html",
@@ -28,6 +28,18 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
+// Network-first: online visitors always get the freshest code (so a deploy lands
+// without a hard refresh), while the cache is kept warm as a fallback for offline
+// use. Only GET requests are cached.
 self.addEventListener("fetch", (e) => {
-  e.respondWith(caches.match(e.request).then((r) => r ?? fetch(e.request)));
+  if (e.request.method !== "GET") return;
+  e.respondWith(
+    fetch(e.request)
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy));
+        return res;
+      })
+      .catch(() => caches.match(e.request))
+  );
 });
