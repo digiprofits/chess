@@ -1,11 +1,11 @@
-const CACHE = "chess-v5";
+const CACHE = "chess-v6";
 const ASSETS = [
   "/",
   "/index.html",
-  "/css/styles.css",
-  "/js/chess.js",
-  "/js/ai.js",
-  "/js/app.js",
+  "/css/styles.css?v=6",
+  "/js/chess.js?v=6",
+  "/js/ai.js?v=6",
+  "/js/app.js?v=6",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

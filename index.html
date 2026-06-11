@@ -7,7 +7,7 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#769656" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/styles.css?v=6" />
   </head>
   <body>
     <main class="app">
@@ -17,31 +17,7 @@
       </header>
 
       <div class="controls">
-        <div class="seg" id="mode-seg" role="group" aria-label="Mode">
-          <button class="seg__btn is-active" data-mode="1p">1 Player</button>
-          <button class="seg__btn" data-mode="2p">2 Players</button>
-        </div>
-
-        <label class="control" id="level-control">
-          <span>Level</span>
-          <select id="level">
-            <option value="1">1 · Beginner</option>
-            <option value="2">2 · Easy</option>
-            <option value="3" selected>3 · Medium</option>
-            <option value="4">4 · Hard</option>
-            <option value="5">5 · Expert</option>
-          </select>
-        </label>
-
-        <label class="control" id="side-control">
-          <span>Play as</span>
-          <select id="side">
-            <option value="w" selected>White</option>
-            <option value="b">Black</option>
-            <option value="random">Random</option>
-          </select>
-        </label>
-
+        <div id="settings-summary" class="summary"></div>
         <button id="new-game" class="btn btn--primary">New Game</button>
       </div>
 
@@ -80,14 +56,63 @@
           <div class="panel__actions">
             <button id="flip" class="btn">Flip</button>
             <button id="undo" class="btn">Undo</button>
+            <button id="resign" class="btn">Resign</button>
           </div>
         </aside>
       </div>
+
+      <div
+        id="setup"
+        class="modal hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="setup-title"
+      >
+        <div class="modal__card">
+          <h2 id="setup-title" class="modal__title">New Game</h2>
+          <p id="setup-warning" class="modal__warning hidden">
+            Starting a new game will end the current game.
+          </p>
+
+          <div class="field">
+            <span class="field__label">Players</span>
+            <div class="seg" id="setup-mode" role="group" aria-label="Players">
+              <button class="seg__btn is-active" data-mode="1p">1 Player</button>
+              <button class="seg__btn" data-mode="2p">2 Players</button>
+            </div>
+          </div>
+
+          <div class="field" id="setup-level-field">
+            <span class="field__label">Difficulty</span>
+            <div class="seg seg--wrap" id="setup-level" role="group" aria-label="Difficulty">
+              <button class="seg__btn" data-level="1">Beginner</button>
+              <button class="seg__btn" data-level="2">Easy</button>
+              <button class="seg__btn is-active" data-level="3">Medium</button>
+              <button class="seg__btn" data-level="4">Hard</button>
+              <button class="seg__btn" data-level="5">Expert</button>
+            </div>
+          </div>
+
+          <div class="field" id="setup-side-field">
+            <span class="field__label">Play as</span>
+            <div class="seg" id="setup-side" role="group" aria-label="Play as">
+              <button class="seg__btn is-active" data-side="w">White</button>
+              <button class="seg__btn" data-side="b">Black</button>
+              <button class="seg__btn" data-side="random">Random</button>
+            </div>
+          </div>
+
+          <div class="modal__actions">
+            <button id="setup-cancel" class="btn">Cancel</button>
+            <button id="setup-start" class="btn btn--primary">Start Game</button>
+          </div>
+        </div>
+      </div>
     </main>
 
-    <script src="js/chess.js"></script>
-    <script src="js/ai.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/chess.js?v=6"></script>
+    <script src="js/ai.js?v=6"></script>
+    <script src="js/app.js?v=6"></script>
     <script>
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("/sw.js");

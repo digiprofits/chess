@@ -11,19 +11,28 @@
     B: "♝", N: "♞", P: "♟",
   };
   const VALUES = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 0 };
+  const LEVEL_NAMES = { 1: "Beginner", 2: "Easy", 3: "Medium", 4: "Hard", 5: "Expert" };
 
   // --- DOM refs ---
   const boardEl = document.getElementById("board");
   const statusEl = document.getElementById("status");
-  const modeSeg = document.getElementById("mode-seg");
-  const levelEl = document.getElementById("level");
-  const sideEl = document.getElementById("side");
-  const levelControl = document.getElementById("level-control");
-  const sideControl = document.getElementById("side-control");
+  const summaryEl = document.getElementById("settings-summary");
   const newGameBtn = document.getElementById("new-game");
   const flipBtn = document.getElementById("flip");
   const undoBtn = document.getElementById("undo");
+  const resignBtn = document.getElementById("resign");
   const promotionEl = document.getElementById("promotion");
+
+  // Setup modal
+  const setupEl = document.getElementById("setup");
+  const setupWarning = document.getElementById("setup-warning");
+  const setupModeEl = document.getElementById("setup-mode");
+  const setupLevelEl = document.getElementById("setup-level");
+  const setupSideEl = document.getElementById("setup-side");
+  const setupLevelField = document.getElementById("setup-level-field");
+  const setupSideField = document.getElementById("setup-side-field");
+  const setupCancelBtn = document.getElementById("setup-cancel");
+  const setupStartBtn = document.getElementById("setup-start");
   const overlayEl = document.getElementById("overlay");
   const overlayTitle = document.getElementById("overlay-title");
   const overlayText = document.getElementById("overlay-text");
@@ -55,8 +64,13 @@
     aiThinking: false,
     animating: false,
     status: "ongoing",
+    resignedBy: null, // colour that resigned ("w"|"b") when status === "resigned"
     undoStack: [],
   };
+
+  // Pending choices in the setup modal (committed to `state` only on Start). `side`
+  // keeps the raw choice so "Random" survives reopening the modal.
+  let setupChoice = { mode: "1p", level: 3, side: "w" };
 
   const squares = []; // squares[displayIndex] -> element (row-major display order)
 
@@ -94,6 +108,7 @@
     return (
       state.status === "checkmate" ||
       state.status === "stalemate" ||
+      state.status === "resigned" ||
       state.status.startsWith("draw")
     );
   }
@@ -144,15 +159,23 @@
     }
 
     renderStatus();
+    renderSummary();
     renderCaptured();
     renderMoves();
     renderPromotion();
     renderOverlay();
     undoBtn.disabled = state.undoStack.length === 0 || state.aiThinking;
-    // Lock the level dropdown once a game is underway. Enabled at the initial
-    // position (so the player can pick their level for the first game) and
-    // re-enabled when the game ends.
-    levelEl.disabled = state.history.length > 0 && !isGameOver();
+    resignBtn.disabled = isGameOver() || state.aiThinking || state.animating;
+  }
+
+  function renderSummary() {
+    if (state.mode === "2p") {
+      summaryEl.textContent = "2 Players";
+    } else {
+      const you = state.humanColor === "w" ? "White" : "Black";
+      summaryEl.textContent =
+        `1 Player · Level ${state.level} (${LEVEL_NAMES[state.level]}) · You: ${you}`;
+    }
   }
 
   function renderStatus() {
@@ -168,6 +191,19 @@
     }
     if (state.status === "stalemate") {
       statusEl.textContent = "Stalemate — draw";
+      return;
+    }
+    if (state.status === "resigned") {
+      const winner = state.resignedBy === "w" ? "Black" : "White";
+      if (state.mode === "1p") {
+        statusEl.textContent =
+          state.resignedBy === state.humanColor
+            ? "You resigned — Computer wins"
+            : "Computer resigned — You win";
+      } else {
+        const loser = state.resignedBy === "w" ? "White" : "Black";
+        statusEl.textContent = `${loser} resigned — ${winner} wins`;
+      }
       return;
     }
     if (state.status.startsWith("draw")) {
@@ -254,6 +290,13 @@
       const winner = state.position.turn === "w" ? "Black" : "White";
       overlayTitle.textContent = "Checkmate";
       overlayText.textContent = `${winner} wins.`;
+    } else if (state.status === "resigned") {
+      const winner = state.resignedBy === "w" ? "Black" : "White";
+      overlayTitle.textContent = "Resigned";
+      overlayText.textContent =
+        state.mode === "1p"
+          ? (state.resignedBy === state.humanColor ? "Computer wins." : "You win.")
+          : `${winner} wins.`;
     } else if (state.status === "stalemate") {
       overlayTitle.textContent = "Stalemate";
       overlayText.textContent = "The game is a draw.";
@@ -457,6 +500,17 @@
     maybeAIMove();
   }
 
+  function resign() {
+    if (isGameOver() || state.aiThinking || state.animating) return;
+    // The side to move resigns; the opponent wins. (In 1P the human can only act
+    // on their own turn, so this resigns the human.)
+    state.resignedBy = state.position.turn;
+    state.status = "resigned";
+    clearSelection();
+    clearFloats();
+    render();
+  }
+
   function maybeAIMove() {
     if (state.mode !== "1p") return;
     if (isGameOver()) return;
@@ -483,12 +537,15 @@
   }
 
   // --- New game ---
-  function newGame() {
-    state.level = Number(levelEl.value);
-    let side = sideEl.value;
-    if (side === "random") side = Math.random() < 0.5 ? "w" : "b";
-    state.humanColor = side;
-    state.flipped = state.mode === "1p" && side === "b";
+  function newGame(cfg) {
+    if (cfg) {
+      state.mode = cfg.mode;
+      state.level = cfg.level;
+      let side = cfg.side;
+      if (side === "random") side = Math.random() < 0.5 ? "w" : "b";
+      state.humanColor = side;
+    }
+    state.flipped = state.mode === "1p" && state.humanColor === "b";
 
     state.position = Chess.initialPosition();
     clearSelection();
@@ -499,6 +556,7 @@
     state.awaitingPromotion = null;
     state.aiThinking = false;
     state.animating = false;
+    state.resignedBy = null;
     state.undoStack = [];
     state.status = "ongoing";
 
@@ -507,28 +565,72 @@
     maybeAIMove();
   }
 
-  function setMode(mode) {
-    state.mode = mode;
-    for (const btn of modeSeg.querySelectorAll(".seg__btn")) {
-      btn.classList.toggle("is-active", btn.dataset.mode === mode);
-    }
-    const oneP = mode === "1p";
-    levelControl.classList.toggle("hidden", !oneP);
-    sideControl.classList.toggle("hidden", !oneP);
-    newGame();
+  // --- Setup modal ---
+  function isSetupOpen() {
+    return !setupEl.classList.contains("hidden");
+  }
+
+  function syncSetupUI() {
+    for (const btn of setupModeEl.querySelectorAll(".seg__btn"))
+      btn.classList.toggle("is-active", btn.dataset.mode === setupChoice.mode);
+    for (const btn of setupLevelEl.querySelectorAll(".seg__btn"))
+      btn.classList.toggle("is-active", Number(btn.dataset.level) === setupChoice.level);
+    for (const btn of setupSideEl.querySelectorAll(".seg__btn"))
+      btn.classList.toggle("is-active", btn.dataset.side === setupChoice.side);
+
+    const oneP = setupChoice.mode === "1p";
+    setupLevelField.classList.toggle("hidden", !oneP);
+    setupSideField.classList.toggle("hidden", !oneP);
+  }
+
+  function openSetup() {
+    // Reflect the current committed settings in the modal.
+    setupChoice = {
+      mode: state.mode,
+      level: state.level,
+      side: setupChoice.side, // keep the last raw side choice (incl. "random")
+    };
+    const inProgress = state.history.length > 0 && !isGameOver();
+    setupWarning.classList.toggle("hidden", !inProgress);
+    syncSetupUI();
+    setupEl.classList.remove("hidden");
+    setupStartBtn.focus();
+  }
+
+  function closeSetup() {
+    setupEl.classList.add("hidden");
+  }
+
+  function startFromSetup() {
+    closeSetup();
+    newGame(setupChoice);
   }
 
   // --- Event wiring ---
-  modeSeg.addEventListener("click", (e) => {
+  setupModeEl.addEventListener("click", (e) => {
     const btn = e.target.closest(".seg__btn");
-    if (btn) setMode(btn.dataset.mode);
+    if (!btn) return;
+    setupChoice.mode = btn.dataset.mode;
+    syncSetupUI();
   });
-  // Level is read only when a new game starts — changing the dropdown mid-game
-  // does NOT alter the current game's AI strength. The select is disabled in
-  // render() once moves have been played to make that obvious.
-  sideEl.addEventListener("change", newGame);
-  newGameBtn.addEventListener("click", newGame);
-  overlayNew.addEventListener("click", newGame);
+  setupLevelEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".seg__btn");
+    if (!btn) return;
+    setupChoice.level = Number(btn.dataset.level);
+    syncSetupUI();
+  });
+  setupSideEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".seg__btn");
+    if (!btn) return;
+    setupChoice.side = btn.dataset.side;
+    syncSetupUI();
+  });
+  setupStartBtn.addEventListener("click", startFromSetup);
+  setupCancelBtn.addEventListener("click", closeSetup);
+
+  newGameBtn.addEventListener("click", openSetup);
+  overlayNew.addEventListener("click", openSetup);
+  resignBtn.addEventListener("click", resign);
   flipBtn.addEventListener("click", () => {
     state.flipped = !state.flipped;
     render();
@@ -536,6 +638,17 @@
   undoBtn.addEventListener("click", undo);
 
   document.addEventListener("keydown", (e) => {
+    if (isSetupOpen()) {
+      if (e.key === "Escape") {
+        closeSetup();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        startFromSetup();
+      } else if (e.key === "Tab") {
+        trapTab(e);
+      }
+      return;
+    }
     if (e.key === "Escape") {
       clearSelection();
       state.awaitingPromotion = null;
@@ -544,11 +657,27 @@
       state.flipped = !state.flipped;
       render();
     } else if (e.key === "n" || e.key === "N") {
-      newGame();
+      openSetup();
     }
   });
 
+  // Keep keyboard focus inside the open modal.
+  function trapTab(e) {
+    const focusable = setupEl.querySelectorAll("button:not([disabled])");
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
   // --- Boot ---
   buildBoard();
-  newGame();
+  newGame({ mode: "1p", level: 3, side: "w" });
+  openSetup();
 })();
