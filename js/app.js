@@ -149,6 +149,10 @@
     renderPromotion();
     renderOverlay();
     undoBtn.disabled = state.undoStack.length === 0 || state.aiThinking;
+    // Lock the level dropdown once a game is underway. Enabled at the initial
+    // position (so the player can pick their level for the first game) and
+    // re-enabled when the game ends.
+    levelEl.disabled = state.history.length > 0 && !isGameOver();
   }
 
   function renderStatus() {
@@ -519,9 +523,9 @@
     const btn = e.target.closest(".seg__btn");
     if (btn) setMode(btn.dataset.mode);
   });
-  levelEl.addEventListener("change", () => {
-    state.level = Number(levelEl.value); // applies to subsequent AI moves
-  });
+  // Level is read only when a new game starts — changing the dropdown mid-game
+  // does NOT alter the current game's AI strength. The select is disabled in
+  // render() once moves have been played to make that obvious.
   sideEl.addEventListener("change", newGame);
   newGameBtn.addEventListener("click", newGame);
   overlayNew.addEventListener("click", newGame);
